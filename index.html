@@ -23,8 +23,12 @@
     .sentence.selected {
       border: 2px solid #5cb85c;
     }
+    /* Các từ trọng âm chỉ gạch chân */
     .highlight {
-      color: #d9534f;
+      text-decoration: underline;
+    }
+    .wrong {
+      color: red;
       font-weight: bold;
     }
     button {
@@ -38,14 +42,37 @@
       font-size: 18px;
       text-align: center;
     }
+    footer {
+      text-align: center;
+      margin-top: 40px;
+      font-size: 14px;
+      color: #777;
+    }
+    select {
+      font-size: 16px;
+      padding: 5px;
+      margin-bottom: 20px;
+    }
   </style>
 </head>
 <body>
   <h1>English Pronunciation Practice</h1>
-  <p style="text-align: center;">Read aloud the sentences below. Words with emphasis (<code>'</code>) are highlighted.</p>
+  <p style="text-align: center;">Choose a sentence and read aloud. Words with emphasis (<code>'</code>) are underlined.</p>
+  
+  <!-- Dropdown để chọn câu luyện -->
+  <div style="text-align: center;">
+    <label for="sentenceSelect">Select sentence: </label>
+    <select id="sentenceSelect">
+      <option value="0">We should 'finish the 'project for our 'history 'class</option>
+      <option value="1">'Peter is re'vising for his e'xam 'next 'week</option>
+      <option value="2">'Students will 'spend more 'time 'working with 'other 'classmates</option>
+      <option value="3">I 'like to 'watch 'videos that 'help me 'learn 'new 'things</option>
+      <option value="4">I have 'installed some 'apps on my 'phone</option>
+    </select>
+  </div>
   
   <div id="sentences">
-    <!-- Mỗi câu được định nghĩa với thuộc tính data-text chứa nội dung chuẩn (không dấu '), và trong nội dung hiển thị có những từ được bôi đậm -->
+    <!-- Nội dung câu chuẩn (data-text) không chứa dấu ' để dễ so sánh -->
     <div class="sentence" data-text="we should finish the project for our history class">
       We should <span class="highlight">finish</span> the <span class="highlight">project</span> for our <span class="highlight">history</span> class.
     </div>
@@ -71,8 +98,28 @@
   
   <div id="evaluation"></div>
   
+  <!-- Footer với chữ "By Luong Kieu Trang" -->
+  <footer>
+    By Luong Kieu Trang
+  </footer>
+  
   <script>
-    // Khởi tạo các biến toàn cục
+    // Yêu cầu quyền truy cập micro ngay khi load trang
+    window.addEventListener('load', function() {
+      if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+          .then(function(stream) {
+            console.log("Microphone access granted");
+            // Chúng ta không cần xử lý stream, chỉ cần trigger quyền.
+          })
+          .catch(function(err) {
+            console.error("Microphone access denied:", err);
+          });
+      } else {
+        alert("Your browser does not support getUserMedia API.");
+      }
+    });
+
     let recognition;
     let transcript = "";
     let isRecording = false;
@@ -81,10 +128,10 @@
     const evaluateBtn = document.getElementById('evaluateBtn');
     const evaluationDiv = document.getElementById('evaluation');
     const sentenceElements = document.querySelectorAll('.sentence');
-    let currentSentenceIndex = 0;
+    const sentenceSelect = document.getElementById('sentenceSelect');
+    let currentSentenceIndex = parseInt(sentenceSelect.value);
     let currentSentence = "";
 
-    // Hàm chọn câu hiện hành
     function loadSentence(index) {
       sentenceElements.forEach((el, idx) => {
         if(idx === index) {
@@ -95,8 +142,15 @@
         }
       });
       evaluationDiv.innerHTML = "Please record the sentence highlighted above.";
+      transcript = "";
+      evaluateBtn.disabled = true;
     }
     loadSentence(currentSentenceIndex);
+
+    sentenceSelect.addEventListener('change', function() {
+      currentSentenceIndex = parseInt(this.value);
+      loadSentence(currentSentenceIndex);
+    });
 
     // Kiểm tra hỗ trợ Speech Recognition API
     window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition || null;
@@ -106,15 +160,20 @@
       recognition = new window.SpeechRecognition();
       recognition.lang = 'en-US';
       recognition.interimResults = false;
+      recognition.continuous = true; // Không tự dừng
       recognition.maxAlternatives = 1;
 
       recognition.onresult = function(event) {
-        transcript = event.results[0][0].transcript;
-        evaluationDiv.innerHTML = "You said: <br><em>" + transcript + "</em>";
+        // Hợp nhất tất cả kết quả thành transcript
+        transcript = "";
+        for(let i = event.resultIndex; i < event.results.length; i++){
+          transcript += event.results[i][0].transcript + " ";
+        }
+        evaluationDiv.innerHTML = "You said: <br><em>" + transcript.trim() + "</em>";
       };
 
       recognition.onend = function() {
-        isRecording = false;
+        // Không tự động thay đổi trạng thái (vì chúng ta dùng continuous)
         startBtn.disabled = false;
         stopBtn.disabled = true;
         evaluateBtn.disabled = false;
@@ -128,7 +187,6 @@
       };
     }
 
-    // Sự kiện cho nút Start
     startBtn.addEventListener('click', function() {
       if (recognition && !isRecording) {
         transcript = "";
@@ -141,41 +199,34 @@
       }
     });
 
-    // Sự kiện cho nút Stop
     stopBtn.addEventListener('click', function() {
       if (recognition && isRecording) {
         recognition.stop();
+        isRecording = false;
       }
     });
 
-    // Sự kiện cho nút Evaluate
+    // Hàm đánh giá: so sánh từng từ trong câu gốc và transcript
     evaluateBtn.addEventListener('click', function() {
       if (transcript) {
-        const expected = currentSentence;
-        const spoken = transcript.toLowerCase();
-        const expectedWords = expected.split(/\s+/);
-        const spokenWords = spoken.split(/\s+/);
-        let matches = 0;
-        expectedWords.forEach(word => {
-          if (spokenWords.includes(word)) {
-            matches++;
+        const expected = currentSentence.split(/\s+/);
+        const spoken = transcript.trim().toLowerCase().split(/\s+/);
+        let resultHTML = "";
+        let correctCount = 0;
+
+        expected.forEach(word => {
+          if (spoken.includes(word)) {
+            resultHTML += word + " ";
+            correctCount++;
+          } else {
+            resultHTML += '<span class="wrong">' + word + '</span> ';
           }
         });
-        const score = Math.round((matches / expectedWords.length) * 100);
-        evaluationDiv.innerHTML += "<br><br>Pronunciation Score: <strong>" + score + "%</strong>";
-        
-        // Nếu còn câu, chuyển sang câu tiếp theo
-        if (currentSentenceIndex < sentenceElements.length - 1) {
-          currentSentenceIndex++;
-          setTimeout(() => {
-            loadSentence(currentSentenceIndex);
-            transcript = "";
-            evaluateBtn.disabled = true;
-          }, 3000);
-        } else {
-          evaluationDiv.innerHTML += "<br><br>You have completed all sentences. Great job!";
-          evaluateBtn.disabled = true;
-        }
+
+        const score = Math.round((correctCount / expected.length) * 100);
+        evaluationDiv.innerHTML += "<br><br>Pronunciation Score: <strong>" + score + "%</strong><br><br>";
+        evaluationDiv.innerHTML += "Expected: " + expected.join(" ") + "<br>";
+        evaluationDiv.innerHTML += "Evaluation: " + resultHTML;
       }
     });
   </script>
