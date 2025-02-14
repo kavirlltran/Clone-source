@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>English Pronunciation Practice</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f7f7f7;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+    }
+    .sentence {
+      margin: 15px 0;
+      padding: 15px;
+      background: #fff;
+      border-radius: 5px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .sentence.selected {
+      border: 2px solid #5cb85c;
+    }
+    .highlight {
+      color: #d9534f;
+      font-weight: bold;
+    }
+    button {
+      padding: 10px 15px;
+      font-size: 16px;
+      margin-right: 10px;
+      cursor: pointer;
+    }
+    #evaluation {
+      margin-top: 20px;
+      font-size: 18px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>English Pronunciation Practice</h1>
+  <p style="text-align: center;">Read aloud the sentences below. Words with emphasis (<code>'</code>) are highlighted.</p>
+  
+  <div id="sentences">
+    <!-- Mỗi câu được định nghĩa với thuộc tính data-text chứa nội dung chuẩn (không dấu '), và trong nội dung hiển thị có những từ được bôi đậm -->
+    <div class="sentence" data-text="we should finish the project for our history class">
+      We should <span class="highlight">finish</span> the <span class="highlight">project</span> for our <span class="highlight">history</span> class.
+    </div>
+    <div class="sentence" data-text="peter is revising for his exam next week">
+      <span class="highlight">Peter</span> is <span class="highlight">revising</span> for his <span class="highlight">exam</span> <span class="highlight">next</span> week.
+    </div>
+    <div class="sentence" data-text="students will spend more time working with other classmates">
+      <span class="highlight">Students</span> will <span class="highlight">spend</span> more <span class="highlight">time</span> <span class="highlight">working</span> with <span class="highlight">other</span> <span class="highlight">classmates</span>.
+    </div>
+    <div class="sentence" data-text="i like to watch videos that help me learn new things">
+      I <span class="highlight">like</span> to <span class="highlight">watch</span> <span class="highlight">videos</span> that <span class="highlight">help</span> me <span class="highlight">learn</span> <span class="highlight">new</span> things.
+    </div>
+    <div class="sentence" data-text="i have installed some apps on my phone">
+      I have <span class="highlight">installed</span> some <span class="highlight">apps</span> on my <span class="highlight">phone</span>.
+    </div>
+  </div>
+  
+  <div style="text-align: center; margin-top: 20px;">
+    <button id="startBtn">Start Recording</button>
+    <button id="stopBtn" disabled>Stop Recording</button>
+    <button id="evaluateBtn" disabled>Evaluate Pronunciation</button>
+  </div>
+  
+  <div id="evaluation"></div>
+  
+  <script>
+    // Khởi tạo các biến toàn cục
+    let recognition;
+    let transcript = "";
+    let isRecording = false;
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const evaluateBtn = document.getElementById('evaluateBtn');
+    const evaluationDiv = document.getElementById('evaluation');
+    const sentenceElements = document.querySelectorAll('.sentence');
+    let currentSentenceIndex = 0;
+    let currentSentence = "";
+
+    // Hàm chọn câu hiện hành
+    function loadSentence(index) {
+      sentenceElements.forEach((el, idx) => {
+        if(idx === index) {
+          el.classList.add('selected');
+          currentSentence = el.getAttribute('data-text').toLowerCase();
+        } else {
+          el.classList.remove('selected');
+        }
+      });
+      evaluationDiv.innerHTML = "Please record the sentence highlighted above.";
+    }
+    loadSentence(currentSentenceIndex);
+
+    // Kiểm tra hỗ trợ Speech Recognition API
+    window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+    if (!window.SpeechRecognition) {
+      alert("Your browser does not support Speech Recognition API. Please use Google Chrome or Microsoft Edge.");
+    } else {
+      recognition = new window.SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onresult = function(event) {
+        transcript = event.results[0][0].transcript;
+        evaluationDiv.innerHTML = "You said: <br><em>" + transcript + "</em>";
+      };
+
+      recognition.onend = function() {
+        isRecording = false;
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        evaluateBtn.disabled = false;
+      };
+
+      recognition.onerror = function(event) {
+        evaluationDiv.innerHTML = "Error occurred: " + event.error;
+        isRecording = false;
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+      };
+    }
+
+    // Sự kiện cho nút Start
+    startBtn.addEventListener('click', function() {
+      if (recognition && !isRecording) {
+        transcript = "";
+        evaluationDiv.innerHTML = "Recording...";
+        isRecording = true;
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        evaluateBtn.disabled = true;
+        recognition.start();
+      }
+    });
+
+    // Sự kiện cho nút Stop
+    stopBtn.addEventListener('click', function() {
+      if (recognition && isRecording) {
+        recognition.stop();
+      }
+    });
+
+    // Sự kiện cho nút Evaluate
+    evaluateBtn.addEventListener('click', function() {
+      if (transcript) {
+        const expected = currentSentence;
+        const spoken = transcript.toLowerCase();
+        const expectedWords = expected.split(/\s+/);
+        const spokenWords = spoken.split(/\s+/);
+        let matches = 0;
+        expectedWords.forEach(word => {
+          if (spokenWords.includes(word)) {
+            matches++;
+          }
+        });
+        const score = Math.round((matches / expectedWords.length) * 100);
+        evaluationDiv.innerHTML += "<br><br>Pronunciation Score: <strong>" + score + "%</strong>";
+        
+        // Nếu còn câu, chuyển sang câu tiếp theo
+        if (currentSentenceIndex < sentenceElements.length - 1) {
+          currentSentenceIndex++;
+          setTimeout(() => {
+            loadSentence(currentSentenceIndex);
+            transcript = "";
+            evaluateBtn.disabled = true;
+          }, 3000);
+        } else {
+          evaluationDiv.innerHTML += "<br><br>You have completed all sentences. Great job!";
+          evaluateBtn.disabled = true;
+        }
+      }
+    });
+  </script>
+</body>
+</html>
