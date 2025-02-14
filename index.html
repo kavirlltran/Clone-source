@@ -19,6 +19,7 @@
       background: #fff;
       border-radius: 5px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      cursor: pointer;
     }
     .sentence.selected {
       border: 2px solid #5cb85c;
@@ -48,31 +49,14 @@
       font-size: 14px;
       color: #777;
     }
-    select {
-      font-size: 16px;
-      padding: 5px;
-      margin-bottom: 20px;
-    }
   </style>
 </head>
 <body>
   <h1>English Pronunciation Practice</h1>
-  <p style="text-align: center;">Choose a sentence and read aloud. Words with emphasis (<code>'</code>) are underlined.</p>
-  
-  <!-- Dropdown để chọn câu luyện -->
-  <div style="text-align: center;">
-    <label for="sentenceSelect">Select sentence: </label>
-    <select id="sentenceSelect">
-      <option value="0">We should 'finish the 'project for our 'history 'class</option>
-      <option value="1">'Peter is re'vising for his e'xam 'next 'week</option>
-      <option value="2">'Students will 'spend more 'time 'working with 'other 'classmates</option>
-      <option value="3">I 'like to 'watch 'videos that 'help me 'learn 'new 'things</option>
-      <option value="4">I have 'installed some 'apps on my 'phone</option>
-    </select>
-  </div>
+  <p style="text-align: center;">Click on a sentence below to select it, then read it aloud. Words with emphasis (<code>'</code>) are underlined.</p>
   
   <div id="sentences">
-    <!-- Nội dung câu chuẩn (data-text) không chứa dấu ' để dễ so sánh -->
+    <!-- Mỗi câu được định nghĩa với thuộc tính data-text chứa nội dung chuẩn (không dấu ') để dễ so sánh -->
     <div class="sentence" data-text="we should finish the project for our history class">
       We should <span class="highlight">finish</span> the <span class="highlight">project</span> for our <span class="highlight">history</span> class.
     </div>
@@ -98,7 +82,6 @@
   
   <div id="evaluation"></div>
   
-  <!-- Footer với chữ "By Luong Kieu Trang" -->
   <footer>
     By Luong Kieu Trang
   </footer>
@@ -110,7 +93,6 @@
         navigator.mediaDevices.getUserMedia({ audio: true })
           .then(function(stream) {
             console.log("Microphone access granted");
-            // Chúng ta không cần xử lý stream, chỉ cần trigger quyền.
           })
           .catch(function(err) {
             console.error("Microphone access denied:", err);
@@ -128,29 +110,31 @@
     const evaluateBtn = document.getElementById('evaluateBtn');
     const evaluationDiv = document.getElementById('evaluation');
     const sentenceElements = document.querySelectorAll('.sentence');
-    const sentenceSelect = document.getElementById('sentenceSelect');
-    let currentSentenceIndex = parseInt(sentenceSelect.value);
     let currentSentence = "";
 
-    function loadSentence(index) {
-      sentenceElements.forEach((el, idx) => {
-        if(idx === index) {
-          el.classList.add('selected');
-          currentSentence = el.getAttribute('data-text').toLowerCase();
-        } else {
-          el.classList.remove('selected');
-        }
+    // Hàm load câu luyện phát âm hiện hành dựa trên phần tử được nhấp
+    function loadSentence(el) {
+      sentenceElements.forEach(sentence => {
+        sentence.classList.remove('selected');
       });
+      el.classList.add('selected');
+      currentSentence = el.getAttribute('data-text').toLowerCase();
       evaluationDiv.innerHTML = "Please record the sentence highlighted above.";
       transcript = "";
       evaluateBtn.disabled = true;
     }
-    loadSentence(currentSentenceIndex);
 
-    sentenceSelect.addEventListener('change', function() {
-      currentSentenceIndex = parseInt(this.value);
-      loadSentence(currentSentenceIndex);
+    // Thiết lập sự kiện click cho từng câu
+    sentenceElements.forEach(sentence => {
+      sentence.addEventListener('click', function() {
+        loadSentence(this);
+      });
     });
+
+    // Khởi tạo câu đầu tiên nếu chưa có câu nào được chọn
+    if(sentenceElements.length > 0) {
+      loadSentence(sentenceElements[0]);
+    }
 
     // Kiểm tra hỗ trợ Speech Recognition API
     window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition || null;
@@ -160,11 +144,10 @@
       recognition = new window.SpeechRecognition();
       recognition.lang = 'en-US';
       recognition.interimResults = false;
-      recognition.continuous = true; // Không tự dừng
+      recognition.continuous = true; // Ghi âm liên tục cho đến khi người dùng dừng
       recognition.maxAlternatives = 1;
 
       recognition.onresult = function(event) {
-        // Hợp nhất tất cả kết quả thành transcript
         transcript = "";
         for(let i = event.resultIndex; i < event.results.length; i++){
           transcript += event.results[i][0].transcript + " ";
@@ -173,7 +156,6 @@
       };
 
       recognition.onend = function() {
-        // Không tự động thay đổi trạng thái (vì chúng ta dùng continuous)
         startBtn.disabled = false;
         stopBtn.disabled = true;
         evaluateBtn.disabled = false;
@@ -206,16 +188,18 @@
       }
     });
 
-    // Hàm đánh giá: so sánh từng từ trong câu gốc và transcript
+    // Hàm đánh giá: so sánh từng từ trong câu gốc và transcript,
+    // những từ không được đọc chính xác sẽ được tô màu đỏ
     evaluateBtn.addEventListener('click', function() {
       if (transcript) {
-        const expected = currentSentence.split(/\s+/);
-        const spoken = transcript.trim().toLowerCase().split(/\s+/);
+        const expectedWords = currentSentence.split(/\s+/);
+        const spokenWords = transcript.trim().toLowerCase().split(/\s+/);
         let resultHTML = "";
         let correctCount = 0;
 
-        expected.forEach(word => {
-          if (spoken.includes(word)) {
+        expectedWords.forEach(word => {
+          // Kiểm tra từ có xuất hiện trong danh sách từ đã nói không
+          if (spokenWords.includes(word)) {
             resultHTML += word + " ";
             correctCount++;
           } else {
@@ -223,9 +207,9 @@
           }
         });
 
-        const score = Math.round((correctCount / expected.length) * 100);
+        const score = Math.round((correctCount / expectedWords.length) * 100);
         evaluationDiv.innerHTML += "<br><br>Pronunciation Score: <strong>" + score + "%</strong><br><br>";
-        evaluationDiv.innerHTML += "Expected: " + expected.join(" ") + "<br>";
+        evaluationDiv.innerHTML += "Expected: " + expectedWords.join(" ") + "<br>";
         evaluationDiv.innerHTML += "Evaluation: " + resultHTML;
       }
     });
