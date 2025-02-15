@@ -9,20 +9,32 @@
       margin: 20px;
       background: #f7f7f7;
       color: #333;
+      position: relative;
+      overflow-x: hidden;
     }
     h1 {
       text-align: center;
+      font-size: 2.5em;
+    }
+    p {
+      font-size: 1.2em;
     }
     .sentence {
       margin: 15px 0;
-      padding: 15px;
+      padding: 20px;
       background: #fff;
       border-radius: 5px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
       cursor: pointer;
+      font-size: 1.3em;
+      transition: box-shadow 0.3s, transform 0.3s;
+    }
+    .sentence:hover {
+      transform: scale(1.02);
     }
     .sentence.selected {
       border: 2px solid #5cb85c;
+      box-shadow: 0 0 15px 5px rgba(255,223,0,0.8);
     }
     /* Các từ trọng âm chỉ gạch chân */
     .highlight {
@@ -33,21 +45,48 @@
       font-weight: bold;
     }
     button {
-      padding: 10px 15px;
-      font-size: 16px;
-      margin-right: 10px;
+      padding: 15px 20px;
+      font-size: 1.1em;
+      font-weight: bold;
+      margin: 10px;
+      border: none;
+      border-radius: 5px;
+      color: #fff;
+      background: #5cb85c;
       cursor: pointer;
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    button:hover {
+      background: #4cae4c;
+      box-shadow: 0 0 10px rgba(76,174,76,0.8);
     }
     #evaluation {
       margin-top: 20px;
-      font-size: 18px;
+      font-size: 1.3em;
       text-align: center;
     }
     footer {
       text-align: center;
       margin-top: 40px;
-      font-size: 14px;
+      font-size: 0.9em;
       color: #777;
+    }
+    /* Ảnh nền nhỏ ở góc dưới */
+    .robot-image {
+      position: fixed;
+      left: 10px;
+      bottom: 10px;
+      width: 150px;
+      opacity: 0.7;
+      z-index: 10;
+    }
+    .phone-image {
+      position: fixed;
+      right: 10px;
+      bottom: 10px;
+      width: 150px;
+      opacity: 0.7;
+      z-index: 10;
     }
   </style>
 </head>
@@ -56,7 +95,7 @@
   <p style="text-align: center;">Click on a sentence below to select it, then read it aloud. Words with emphasis (<code>'</code>) are underlined.</p>
   
   <div id="sentences">
-    <!-- Mỗi câu được định nghĩa với thuộc tính data-text chứa nội dung chuẩn (không dấu ') để dễ so sánh -->
+    <!-- Nội dung câu chuẩn (data-text) không chứa dấu ' để dễ so sánh -->
     <div class="sentence" data-text="we should finish the project for our history class">
       We should <span class="highlight">finish</span> the <span class="highlight">project</span> for our <span class="highlight">history</span> class.
     </div>
@@ -81,6 +120,10 @@
   </div>
   
   <div id="evaluation"></div>
+  
+  <!-- Thêm 2 ảnh nền nhỏ -->
+  <img src="robot.png" alt="Humanoid Robot" class="robot-image">
+  <img src="phone.png" alt="Mobile Phone" class="phone-image">
   
   <footer>
     By Luong Kieu Trang
@@ -131,7 +174,7 @@
       });
     });
 
-    // Khởi tạo câu đầu tiên nếu chưa có câu nào được chọn
+    // Nếu chưa có câu nào được chọn, tự động chọn câu đầu tiên
     if(sentenceElements.length > 0) {
       loadSentence(sentenceElements[0]);
     }
@@ -198,7 +241,6 @@
         let correctCount = 0;
 
         expectedWords.forEach(word => {
-          // Kiểm tra từ có xuất hiện trong danh sách từ đã nói không
           if (spokenWords.includes(word)) {
             resultHTML += word + " ";
             correctCount++;
