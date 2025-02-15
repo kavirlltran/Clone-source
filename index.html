@@ -222,4 +222,44 @@
         transcript = "";
         evaluationDiv.innerHTML = "Recording...";
         isRecording = true;
-        st
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        evaluateBtn.disabled = true;
+        recognition.start();
+      }
+    });
+
+    stopBtn.addEventListener('click', function() {
+      if (recognition && isRecording) {
+        recognition.stop();
+        isRecording = false;
+      }
+    });
+
+    // Hàm đánh giá: so sánh từng từ trong câu gốc và transcript.
+    // Nếu từ trong câu gốc không xuất hiện trong transcript, nó được tô màu đỏ.
+    evaluateBtn.addEventListener('click', function() {
+      if (transcript) {
+        const expectedWords = currentSentence.split(/\s+/);
+        const spokenWords = transcript.trim().toLowerCase().split(/\s+/);
+        let resultHTML = "";
+        let correctCount = 0;
+
+        expectedWords.forEach(word => {
+          if (spokenWords.includes(word)) {
+            resultHTML += word + " ";
+            correctCount++;
+          } else {
+            resultHTML += '<span class="wrong">' + word + '</span> ';
+          }
+        });
+
+        const score = Math.round((correctCount / expectedWords.length) * 100);
+        evaluationDiv.innerHTML += "<br><br>Pronunciation Score: <strong>" + score + "%</strong><br><br>";
+        evaluationDiv.innerHTML += "Expected: " + expectedWords.join(" ") + "<br>";
+        evaluationDiv.innerHTML += "Evaluation: " + resultHTML;
+      }
+    });
+  </script>
+</body>
+</html>
