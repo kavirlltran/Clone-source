@@ -18,6 +18,7 @@
     }
     p {
       font-size: 1.2em;
+      text-align: center;
     }
     .sentence {
       margin: 15px 0;
@@ -32,9 +33,11 @@
     .sentence:hover {
       transform: scale(1.02);
     }
+    /* Khi một câu được chọn, nó sẽ luôn sáng và nổi bật */
     .sentence.selected {
       border: 2px solid #5cb85c;
-      box-shadow: 0 0 15px 5px rgba(255,223,0,0.8);
+      box-shadow: 0 0 15px 5px rgba(255,223,0,0.9);
+      background: #fff;
     }
     /* Các từ trọng âm chỉ gạch chân */
     .highlight {
@@ -44,7 +47,8 @@
       color: red;
       font-weight: bold;
     }
-    button {
+    /* Nút duy nhất */
+    #toggleBtn {
       padding: 15px 20px;
       font-size: 1.1em;
       font-weight: bold;
@@ -56,11 +60,11 @@
       cursor: pointer;
       transition: background 0.3s, box-shadow 0.3s;
     }
-    button:hover:enabled {
+    #toggleBtn:hover:enabled {
       background: #4cae4c;
       box-shadow: 0 0 10px rgba(76,174,76,0.8);
     }
-    button:disabled {
+    #toggleBtn:disabled {
       opacity: 0.6;
       cursor: not-allowed;
     }
@@ -96,7 +100,7 @@
 </head>
 <body>
   <h1>English Pronunciation Practice</h1>
-  <p style="text-align: center;">Click on a sentence below to select it, then read it aloud. Words with emphasis (<code>'</code>) are underlined.</p>
+  <p>Click on a sentence below to select it, then read it aloud. Words with emphasis (<code>'</code>) are underlined.</p>
   
   <div id="sentences">
     <!-- Nội dung câu chuẩn (data-text) không chứa dấu ' để dễ so sánh -->
@@ -118,9 +122,7 @@
   </div>
   
   <div style="text-align: center; margin-top: 20px;">
-    <button id="startBtn">Start Recording</button>
-    <button id="stopBtn" disabled>Stop Recording</button>
-    <button id="evaluateBtn" disabled>Evaluate Pronunciation</button>
+    <button id="toggleBtn">Start Recording</button>
   </div>
   
   <div id="evaluation"></div>
@@ -134,7 +136,7 @@
   </footer>
   
   <script>
-    // Yêu cầu quyền truy cập micro ngay khi load trang
+    // Yêu cầu quyền truy cập micro khi load trang
     window.addEventListener('load', function() {
       if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         navigator.mediaDevices.getUserMedia({ audio: true })
@@ -152,9 +154,7 @@
     let recognition;
     let transcript = "";
     let isRecording = false;
-    const startBtn = document.getElementById('startBtn');
-    const stopBtn = document.getElementById('stopBtn');
-    const evaluateBtn = document.getElementById('evaluateBtn');
+    const toggleBtn = document.getElementById('toggleBtn');
     const evaluationDiv = document.getElementById('evaluation');
     const sentenceElements = document.querySelectorAll('.sentence');
     let currentSentence = "";
@@ -168,7 +168,6 @@
       currentSentence = el.getAttribute('data-text').toLowerCase();
       evaluationDiv.innerHTML = "Please record the sentence highlighted above.";
       transcript = "";
-      evaluateBtn.disabled = true;
     }
 
     // Thiết lập sự kiện click cho từng câu
@@ -203,42 +202,40 @@
       };
 
       recognition.onend = function() {
-        // Khi ghi âm dừng (do nút Stop được bấm)
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
-        evaluateBtn.disabled = false;
+        toggleBtn.disabled = false;
+        toggleBtn.textContent = "Start Recording";
+        isRecording = false;
+        evaluatePronunciation();
       };
 
       recognition.onerror = function(event) {
         evaluationDiv.innerHTML = "Error occurred: " + event.error;
         isRecording = false;
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
+        toggleBtn.disabled = false;
+        toggleBtn.textContent = "Start Recording";
       };
     }
 
-    startBtn.addEventListener('click', function() {
-      if (recognition && !isRecording) {
+    // Gộp nút Start/Stop
+    toggleBtn.addEventListener('click', function() {
+      if (!isRecording) {
         transcript = "";
         evaluationDiv.innerHTML = "Recording...";
         isRecording = true;
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
-        evaluateBtn.disabled = true;
+        toggleBtn.textContent = "Stop Recording";
+        toggleBtn.disabled = false;
         recognition.start();
-      }
-    });
-
-    stopBtn.addEventListener('click', function() {
-      if (recognition && isRecording) {
+      } else {
+        // Nếu đang ghi âm, dừng ghi âm
+        toggleBtn.disabled = true; // Vô hiệu hóa nút tạm thời
         recognition.stop();
-        isRecording = false;
+        // Khi onend của recognition sẽ gọi evaluatePronunciation()
       }
     });
 
     // Hàm đánh giá: so sánh từng từ trong câu gốc và transcript.
-    // Nếu từ trong câu gốc không xuất hiện trong transcript, nó được tô màu đỏ.
-    evaluateBtn.addEventListener('click', function() {
+    // Nếu từ trong câu gốc không xuất hiện trong transcript, nó được hiển thị với màu đỏ.
+    function evaluatePronunciation() {
       if (transcript) {
         const expectedWords = currentSentence.split(/\s+/);
         const spokenWords = transcript.trim().toLowerCase().split(/\s+/);
@@ -259,7 +256,7 @@
         evaluationDiv.innerHTML += "Expected: " + expectedWords.join(" ") + "<br>";
         evaluationDiv.innerHTML += "Evaluation: " + resultHTML;
       }
-    });
+    }
   </script>
 </body>
 </html>
