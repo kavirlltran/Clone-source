@@ -56,9 +56,13 @@
       cursor: pointer;
       transition: background 0.3s, box-shadow 0.3s;
     }
-    button:hover {
+    button:hover:enabled {
       background: #4cae4c;
       box-shadow: 0 0 10px rgba(76,174,76,0.8);
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
     }
     #evaluation {
       margin-top: 20px;
@@ -199,6 +203,7 @@
       };
 
       recognition.onend = function() {
+        // Khi ghi âm dừng (do nút Stop được bấm)
         startBtn.disabled = false;
         stopBtn.disabled = true;
         evaluateBtn.disabled = false;
@@ -217,44 +222,4 @@
         transcript = "";
         evaluationDiv.innerHTML = "Recording...";
         isRecording = true;
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
-        evaluateBtn.disabled = true;
-        recognition.start();
-      }
-    });
-
-    stopBtn.addEventListener('click', function() {
-      if (recognition && isRecording) {
-        recognition.stop();
-        isRecording = false;
-      }
-    });
-
-    // Hàm đánh giá: so sánh từng từ trong câu gốc và transcript,
-    // những từ không được đọc chính xác sẽ được tô màu đỏ
-    evaluateBtn.addEventListener('click', function() {
-      if (transcript) {
-        const expectedWords = currentSentence.split(/\s+/);
-        const spokenWords = transcript.trim().toLowerCase().split(/\s+/);
-        let resultHTML = "";
-        let correctCount = 0;
-
-        expectedWords.forEach(word => {
-          if (spokenWords.includes(word)) {
-            resultHTML += word + " ";
-            correctCount++;
-          } else {
-            resultHTML += '<span class="wrong">' + word + '</span> ';
-          }
-        });
-
-        const score = Math.round((correctCount / expectedWords.length) * 100);
-        evaluationDiv.innerHTML += "<br><br>Pronunciation Score: <strong>" + score + "%</strong><br><br>";
-        evaluationDiv.innerHTML += "Expected: " + expectedWords.join(" ") + "<br>";
-        evaluationDiv.innerHTML += "Evaluation: " + resultHTML;
-      }
-    });
-  </script>
-</body>
-</html>
+        st
