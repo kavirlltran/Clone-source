@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <title>English Pronunciation Practice</title>
   <style>
-    /* Đặt ảnh nền toàn trang */
+    /* Đặt ảnh nền toàn trang sử dụng mobile.png */
     body {
       font-family: Arial, sans-serif;
       margin: 20px;
-      background: #f7f7f7 url("robot.png") no-repeat center center fixed;
+      background: #f7f7f7 url("mobile.png") no-repeat center center fixed;
       background-size: cover;
       color: #333;
       position: relative;
@@ -33,7 +33,7 @@
     .sentence {
       margin: 15px 0;
       padding: 20px;
-      background: rgba(255,255,255,0.9);
+      background: rgba(255, 255, 255, 0.9);
       border-radius: 5px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.2);
       cursor: pointer;
@@ -133,7 +133,7 @@
   </footer>
   
   <script>
-    // Yêu cầu quyền truy cập micro ngay khi trang load
+    // Yêu cầu quyền truy cập micro khi trang load
     window.addEventListener('load', function() {
       if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         navigator.mediaDevices.getUserMedia({ audio: true })
@@ -199,7 +199,7 @@
       };
 
       recognition.onend = function() {
-        // Nếu isRecording vẫn true, tự động khởi động lại để không bị tự dừng do lỗi
+        // Nếu isRecording vẫn true, tự động khởi động lại để tránh dừng do lỗi
         if (isRecording) {
           recognition.start();
         } else {
@@ -217,7 +217,7 @@
       };
     }
 
-    // Gộp nút Start/Stop
+    // Gộp nút Start/Stop: Khi nhấn nút, nếu chưa ghi âm thì bắt đầu, nếu đang ghi âm thì dừng.
     toggleBtn.addEventListener('click', function() {
       if (!isRecording) {
         transcript = "";
@@ -229,7 +229,7 @@
       } else {
         // Khi bấm nút dừng, đặt isRecording = false, dừng ghi âm
         isRecording = false;
-        toggleBtn.disabled = true; // vô hiệu hóa nút cho đến khi onend xử lý xong
+        toggleBtn.disabled = true;
         recognition.stop();
       }
     });
