@@ -4,10 +4,12 @@
   <meta charset="UTF-8">
   <title>English Pronunciation Practice</title>
   <style>
+    /* Đặt ảnh nền toàn trang */
     body {
       font-family: Arial, sans-serif;
       margin: 20px;
-      background: #f7f7f7;
+      background: #f7f7f7 url("robot.png") no-repeat center center fixed;
+      background-size: cover;
       color: #333;
       position: relative;
       overflow-x: hidden;
@@ -15,17 +17,25 @@
     h1 {
       text-align: center;
       font-size: 2.5em;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 10px;
+      border-radius: 5px;
+      display: inline-block;
     }
     p {
       font-size: 1.2em;
       text-align: center;
+      background: rgba(255, 255, 255, 0.8);
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 5px;
     }
     .sentence {
       margin: 15px 0;
       padding: 20px;
-      background: #fff;
+      background: rgba(255,255,255,0.9);
       border-radius: 5px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
       cursor: pointer;
       font-size: 1.3em;
       transition: box-shadow 0.3s, transform 0.3s;
@@ -47,7 +57,7 @@
       color: red;
       font-weight: bold;
     }
-    /* Nút duy nhất */
+    /* Nút ghi âm duy nhất */
     #toggleBtn {
       padding: 15px 20px;
       font-size: 1.1em;
@@ -72,29 +82,20 @@
       margin-top: 20px;
       font-size: 1.3em;
       text-align: center;
+      background: rgba(255,255,255,0.9);
+      padding: 15px;
+      border-radius: 5px;
+      display: inline-block;
     }
     footer {
       text-align: center;
       margin-top: 40px;
       font-size: 0.9em;
       color: #777;
-    }
-    /* Ảnh nền nhỏ ở góc dưới */
-    .robot-image {
-      position: fixed;
-      left: 10px;
-      bottom: 10px;
-      width: 150px;
-      opacity: 0.7;
-      z-index: 10;
-    }
-    .phone-image {
-      position: fixed;
-      right: 10px;
-      bottom: 10px;
-      width: 150px;
-      opacity: 0.7;
-      z-index: 10;
+      background: rgba(255,255,255,0.8);
+      padding: 10px;
+      border-radius: 5px;
+      display: inline-block;
     }
   </style>
 </head>
@@ -127,16 +128,12 @@
   
   <div id="evaluation"></div>
   
-  <!-- Thêm 2 ảnh nền nhỏ -->
-  <img src="robot.png" alt="Humanoid Robot" class="robot-image">
-  <img src="phone.png" alt="Mobile Phone" class="phone-image">
-  
   <footer>
     By Luong Kieu Trang
   </footer>
   
   <script>
-    // Yêu cầu quyền truy cập micro khi trang load
+    // Yêu cầu quyền truy cập micro ngay khi trang load
     window.addEventListener('load', function() {
       if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         navigator.mediaDevices.getUserMedia({ audio: true })
@@ -202,11 +199,10 @@
       };
 
       recognition.onend = function() {
-        // Nếu người dùng vẫn muốn ghi âm, tự động khởi động lại
+        // Nếu isRecording vẫn true, tự động khởi động lại để không bị tự dừng do lỗi
         if (isRecording) {
           recognition.start();
         } else {
-          // Nếu người dùng đã bấm dừng, cập nhật nút và đánh giá
           toggleBtn.disabled = false;
           toggleBtn.textContent = "Start Recording";
           evaluatePronunciation();
@@ -231,6 +227,52 @@
         toggleBtn.disabled = false;
         recognition.start();
       } else {
-        // Khi bấm nút dừng, đặt isRecording = false, sau đó gọi recognition.stop()
+        // Khi bấm nút dừng, đặt isRecording = false, dừng ghi âm
         isRecording = false;
-        toggleBtn.disabled = true; // tạm thời v
+        toggleBtn.disabled = true; // vô hiệu hóa nút cho đến khi onend xử lý xong
+        recognition.stop();
+      }
+    });
+
+    // Hàm đánh giá: so sánh từng từ trong câu gốc và transcript.
+    // Nếu từ trong câu gốc không xuất hiện trong transcript, hiển thị với màu đỏ.
+    // Sau đó, kiểm tra các từ trọng âm: với mỗi từ được bọc bởi span.highlight, hỏi người dùng xác nhận nếu họ đã nhấn mạnh đúng.
+    function evaluatePronunciation() {
+      if (transcript) {
+        const expectedWords = currentSentence.split(/\s+/);
+        const spokenWords = transcript.trim().toLowerCase().split(/\s+/);
+        let resultHTML = "";
+        let correctCount = 0;
+
+        expectedWords.forEach(word => {
+          if (spokenWords.includes(word)) {
+            resultHTML += word + " ";
+            correctCount++;
+          } else {
+            resultHTML += '<span class="wrong">' + word + '</span> ';
+          }
+        });
+
+        const overallScore = Math.round((correctCount / expectedWords.length) * 100);
+        let finalHTML = "Pronunciation Score: <strong>" + overallScore + "%</strong><br><br>";
+        finalHTML += "Expected: " + expectedWords.join(" ") + "<br>";
+        finalHTML += "Evaluation: " + resultHTML;
+
+        // Kiểm tra từ trọng âm: duyệt qua các phần tử có class "highlight" trong câu được chọn
+        const stressedElements = document.querySelectorAll('.sentence.selected .highlight');
+        const stressedWords = Array.from(stressedElements).map(el => el.textContent.toLowerCase());
+        let stressedCorrect = 0;
+        stressedWords.forEach(word => {
+          if (confirm("Did you stress the word '" + word + "' correctly?")) {
+            stressedCorrect++;
+          }
+        });
+        const stressedScore = stressedWords.length ? Math.round((stressedCorrect / stressedWords.length) * 100) : 100;
+        finalHTML += "<br><br>Stressed Words Score: <strong>" + stressedScore + "%</strong>";
+
+        evaluationDiv.innerHTML = finalHTML;
+      }
+    }
+  </script>
+</body>
+</html>
